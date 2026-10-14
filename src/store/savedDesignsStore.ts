@@ -3,6 +3,7 @@ import { persist } from "zustand/middleware";
 import { useCanvasStore, type ComponentNodeData } from "./canvasStore";
 import { useAppStore } from "./appStore";
 import { PROBLEMS } from "@/data/problems";
+import { track } from "@/lib/analytics";
 
 export interface SerializedComponentData {
   componentId: string;
@@ -129,6 +130,12 @@ export const useSavedDesignsStore = create<SavedDesignsState>()(
         };
 
         set((s) => ({ designs: [design, ...s.designs] }));
+        track("design_saved", {
+          problem_id: problemId,
+          node_count: nodes.filter((n) => n.type !== "text").length,
+          edge_count: edges.length,
+          saved_design_count: get().designs.length,
+        });
         useAppStore.getState().showToast(`Design "${name}" saved`, "success");
       },
 

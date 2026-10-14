@@ -28,6 +28,7 @@ import { type Node, type Edge, useReactFlow } from "@xyflow/react";
 import { getComponentById } from "@/data/components";
 import type { ComponentNodeData } from "@/store/canvasStore";
 import { exportAsPng, exportAsSvg, exportAsJSON } from "@/lib/exportCanvas";
+import { track } from "@/lib/analytics";
 
 interface TopBarProps {
   onSimulate: () => void;
@@ -75,22 +76,24 @@ export function TopBar({ onSimulate, onScore, onClearCanvas, onSave, onLoad, onS
     const name = currentProblem?.title ?? "design";
     try {
       await exportAsPng(name);
+      track("design_exported", { format: "png", problem_id: selectedProblemId });
       useAppStore.getState().showToast("Exported as PNG", "success");
     } catch {
       useAppStore.getState().showToast("Export failed", "error");
     }
-  }, [currentProblem]);
+  }, [currentProblem, selectedProblemId]);
 
   const handleExportSvg = useCallback(async () => {
     setExportOpen(false);
     const name = currentProblem?.title ?? "design";
     try {
       await exportAsSvg(name);
+      track("design_exported", { format: "svg", problem_id: selectedProblemId });
       useAppStore.getState().showToast("Exported as SVG", "success");
     } catch {
       useAppStore.getState().showToast("Export failed", "error");
     }
-  }, [currentProblem]);
+  }, [currentProblem, selectedProblemId]);
 
   const handleExportJson = useCallback(() => {
     setExportOpen(false);
@@ -101,8 +104,9 @@ export function TopBar({ onSimulate, onScore, onClearCanvas, onSave, onLoad, onS
       return;
     }
     exportAsJSON(nodes, edges, name);
+    track("design_exported", { format: "json", problem_id: selectedProblemId });
     useAppStore.getState().showToast("Exported as JSON", "success");
-  }, [currentProblem]);
+  }, [currentProblem, selectedProblemId]);
 
   // Keyboard shortcut: Ctrl/Cmd+E → Export as PNG
   useEffect(() => {
@@ -171,6 +175,11 @@ export function TopBar({ onSimulate, onScore, onClearCanvas, onSave, onLoad, onS
       nodes: refNodes,
       edges: refEdges,
       readOnly: true,
+    });
+
+    track("reference_solution_opened", {
+      problem_id: problem.id,
+      difficulty: problem.difficulty,
     });
 
     useAppStore.getState().showToast("Reference opened in new tab — your design is safe", "success");

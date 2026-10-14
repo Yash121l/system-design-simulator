@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { track } from "@/lib/analytics";
 
 export type ToastType = "success" | "error" | "info";
 
@@ -29,7 +30,7 @@ let toastTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
 export const useAppStore = create<AppState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       selectedProblemId: "url-shortener",
       leftSidebarOpen: true,
       rightPanelOpen: true,
@@ -37,7 +38,15 @@ export const useAppStore = create<AppState>()(
       theme: "dark",
       toast: null,
 
-      setSelectedProblem: (id) => set({ selectedProblemId: id }),
+      setSelectedProblem: (id) => {
+        if (id !== get().selectedProblemId) {
+          track("problem_selected", {
+            problem_id: id,
+            is_custom: id.startsWith("custom-"),
+          });
+        }
+        set({ selectedProblemId: id });
+      },
       toggleLeftSidebar: () =>
         set((s) => ({ leftSidebarOpen: !s.leftSidebarOpen })),
       toggleRightPanel: () =>

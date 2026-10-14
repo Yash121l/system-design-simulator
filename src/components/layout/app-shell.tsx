@@ -11,6 +11,7 @@ import { useCanvasStore, type ComponentNodeData } from "@/store/canvasStore";
 import { useSimulationStore } from "@/store/simulationStore";
 import { runSimulation } from "@/engine/simulator";
 import { scoreDesign } from "@/scoring/scorer";
+import { track } from "@/lib/analytics";
 import { Toast } from "@/components/ui/Toast";
 import { SaveDialog } from "@/components/dialogs/SaveDialog";
 import { LoadDialog } from "@/components/dialogs/LoadDialog";
@@ -63,6 +64,16 @@ export function AppShell() {
 
       useSimulationStore.getState().setResult(result);
       useSimulationStore.getState().setRunning(false);
+      track("simulation_run", {
+        problem_id: useAppStore.getState().selectedProblemId,
+        node_count: componentNodes.length,
+        edge_count: edges.length,
+        requests_per_sec: config.requestsPerSec,
+        throughput: result.throughput,
+        total_latency_ms: result.totalLatencyMs,
+        bottleneck_count: result.bottleneckNodes.length,
+        warning_count: result.warnings.length,
+      });
       useAppStore.getState().showToast("Simulation complete!", "success");
     }, 100);
   }, []);
@@ -79,6 +90,19 @@ export function AppShell() {
     }
 
     const result = scoreDesign(componentNodes, edges);
+    track("design_scored", {
+      problem_id: useAppStore.getState().selectedProblemId,
+      score: result.total,
+      verdict: result.verdict,
+      node_count: componentNodes.length,
+      edge_count: edges.length,
+      ...Object.fromEntries(
+        result.categories.map((c) => [
+          `score_${c.category.toLowerCase().replace(/[^a-z0-9]+/g, "_")}`,
+          c.score,
+        ])
+      ),
+    });
     useSimulationStore.getState().setScoreResult(result);
     useSimulationStore.getState().setShowScore(true);
     useAppStore.getState().setActiveRightTab("score");

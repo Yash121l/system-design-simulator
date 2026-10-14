@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { track } from "@/lib/analytics";
 
 export interface Phase {
   name: string;
@@ -71,23 +72,34 @@ export const useInterviewStore = create<InterviewState>((set, get) => ({
   timerSeconds: 0,
   phaseStartTime: 0,
 
-  startInterview: () =>
+  startInterview: () => {
+    track("interview_started", { phase_count: get().phases.length });
     set({
       mode: "interview",
       currentPhase: 0,
       timerRunning: true,
       timerSeconds: 0,
       phaseStartTime: 0,
-    }),
+    });
+  },
 
-  endInterview: () =>
+  endInterview: () => {
+    const { currentPhase, phases, timerSeconds } = get();
+    track("interview_ended", {
+      phase_reached: currentPhase + 1,
+      phase_name: phases[currentPhase]?.name,
+      phase_count: phases.length,
+      completed_all_phases: currentPhase === phases.length - 1,
+      duration_sec: timerSeconds,
+    });
     set({
       mode: "free",
       currentPhase: 0,
       timerRunning: false,
       timerSeconds: 0,
       phaseStartTime: 0,
-    }),
+    });
+  },
 
   nextPhase: () => {
     const { currentPhase, phases, timerSeconds } = get();
